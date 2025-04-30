@@ -101,3 +101,60 @@ body {
   animation: gradient-move 6s infinite linear;
 }
 
+/* VS Code inspired workspace styles */
+.workspace-header {
+  height: 42px;
+  background-color: #000000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.workspace-logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-decoration: none;
+}
+
+.workspace-nav {
+  background-color: #1e1e1e;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.workspace-button {
+  background-color: #2d2d2d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.workspace-button:hover {
+  background-color: #3e3e3e;
+}
+
+.workspace-button-primary {
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  color: white;
+  border: none;
+}
+
+.workspace-button-primary:hover {
+  opacity: 0.9;
+}
+
+.ai-chat-button {
+  background: linear-gradient(90deg, #0ea5e9, #10b981);
+  border: none;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+  transition: all 0.3s ease;
+}
+
+.ai-chat-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
+}
+
