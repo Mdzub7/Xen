@@ -6,7 +6,7 @@ import { db } from "@/config/firebase";
 import Chat from "@/components/Chat";
 import Editor from "@/components/Editor";
 import SearchBar from "@/components/Searchbar";
-import { MessageCircle, Menu, PanelLeftOpen, Code, Play } from "lucide-react"; 
+import { MessageCircle, Menu, PanelLeftOpen, Code, Play, Search, Settings, LayoutDashboard, PlusCircle, Folder } from "lucide-react"; 
 import Header from "@/components/Header";
 import ShowMembers from "@/components/Members";
 import LiveCursor from "@/components/LiveCursor";
@@ -51,59 +51,85 @@ const Workspace = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white min-w-[1024px] relative">
-      
-      {/* Header */}
-      <header className="workspace-header flex items-center px-4 justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="workspace-logo">Xen.ai</Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors px-3">Dashboard</Link>
-          <Link href="/workspace" className="text-sm text-gray-300 hover:text-white transition-colors px-3">Workspace</Link>
-        </div>
-      </header>
-
+      <Header workspaceId={workspaceId} workspaceName={workspaceName} />
       <div className="flex flex-1 overflow-hidden relative">
-        {/* File Panel Toggle */}
-        <button
-          className="absolute top-3 left-4 z-20 p-1.5 hover:bg-gray-800 rounded-md"
-          onClick={() => setIsNavOpen(!isNavOpen)}
-        >
-            <PanelLeftOpen 
-              size={20} 
-              className="text-gray-400 hover:text-white transition-colors"
-            />
-        </button> 
-
-        {/* Left Side - File & Folder Panel */}
-        <nav
-          className={`workspace-nav transition-all duration-300 ${
-            isNavOpen ? "w-[18%]" : "w-0"
-          } overflow-hidden flex flex-col h-full`}
-        >
-          <div className="py-3 px-4 text-sm font-medium text-gray-400 uppercase tracking-wider mt-6">FILE EXPLORER</div>
-          {isNavOpen && (
-              <NavPanel workspaceId={workspaceId} openFile={setSelectedFile} />
-          )}
+        {/* Left Side Navigation Panel */}
+        <nav className="w-16 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4 gap-4">
+          <button
+            className={`p-2 rounded-lg transition-all ${isNavOpen ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            onClick={() => setIsNavOpen(!isNavOpen)}
+            title="Toggle Explorer"
+          >
+            <Code size={20} />
+          </button>
+          <Link href="/dashboard">
+            <button
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+              title="Dashboard"
+            >
+              <LayoutDashboard size={20} />
+            </button>
+          </Link>
+          <button
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            title="AI Chat"
+          >
+            <MessageCircle size={20} />
+          </button>
+          <button
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            title="Search"
+          >
+            <Search size={20} />
+          </button>
+          <button
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
         </nav>
 
-        {/* Main - Editor Content */}
-        <main className="flex-1 h-full flex flex-col py-2 overflow-auto">
-          <div className="flex h-[6%] gap-12 items-center justify-between px-6 mb-2">
-            <h1 className="text-xl font-medium">Workspace: <span className="text-indigo-400 font-mono">{workspaceName}</span></h1>
-            <div className="flex items-center gap-4">
-                <div className="workspace-button flex items-center gap-2 px-3 py-1.5"> 
-                  <SearchBar workspaceId={workspaceId} /> 
+        {/* File Explorer Panel */}
+        <div
+          className={`transition-all duration-300 bg-gray-900 border-r border-gray-800 ${
+            isNavOpen ? "w-[250px]" : "w-0"
+          } overflow-hidden`}
+        >
+          {isNavOpen && (
+            <div className="flex flex-col h-full">
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white">File Explorer</h2>
+                  <div className="flex gap-2">
+                    <button className="p-1.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 rounded-lg transition-all">
+                      <PlusCircle size={16} className="text-white" />
+                    </button>
+                    <button className="p-1.5 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 rounded-lg transition-all">
+                      <Folder size={16} className="text-white" />
+                    </button>
+                  </div>
                 </div>
-                <button className="workspace-button-primary flex items-center gap-2 px-4 py-1.5 rounded-md">
-                  <Play size={16} />
-                  Run Code
-                </button>
-                <div className="workspace-button px-3 py-1.5 rounded-md flex items-center justify-center gap-2">
-                  <ShowMembers workspaceId={workspaceId} />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search files..."
+                    className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <Search className="w-4 h-4" />
+                  </div>
                 </div>
+              </div>
+              <NavPanel workspaceId={workspaceId} openFile={setSelectedFile} />
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Main - Editor Content */}
+        <main className="flex-1 h-full flex flex-col overflow-auto">
+
 
           <Editor file={selectedFile} />
         </main>
