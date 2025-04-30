@@ -18,7 +18,10 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.className}>
       <body>
         <AuthProvider>
-          <Provider>{children}</Provider>
+          <Provider>
+            {/* Header and Footer will be rendered in the Home component instead */}
+            <main>{children}</main>
+          </Provider>
         </AuthProvider>
       </body>
     </html>

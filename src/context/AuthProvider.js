@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
       if (user) {
         setUser(user);
 
-        // ✅ Redirect to dashboard only when user is on login, register, or home
-        if (pathname === "/login" || pathname === "/" || pathname === "/register") {
+        // Only redirect from login and register pages, not from homepage
+        if (pathname === "/login" || pathname === "/register") {
           router.push("/dashboard");
         }
       } else {
