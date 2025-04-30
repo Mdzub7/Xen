@@ -6,7 +6,7 @@ import { db } from "@/config/firebase";
 import Chat from "@/components/Chat";
 import Editor from "@/components/Editor";
 import SearchBar from "@/components/Searchbar";
-import { MessageCircle, Menu, PanelLeftOpen, Code, Play, Search, Settings, LayoutDashboard, PlusCircle, Folder } from "lucide-react"; 
+import { MessageCircle, Menu, PanelLeftOpen, Code, Play, Search, Settings, LayoutDashboard, PlusCircle, Folder, X } from "lucide-react"; 
 import Header from "@/components/Header";
 import ShowMembers from "@/components/Members";
 import LiveCursor from "@/components/LiveCursor";
@@ -21,6 +21,14 @@ const Workspace = () => {
   const [membersCount, setMembersCount] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    // Implement search logic here
+  };
 
 
   useEffect(() => {
@@ -57,7 +65,11 @@ const Workspace = () => {
         <nav className="w-16 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4 gap-4">
           <button
             className={`p-2 rounded-lg transition-all ${isNavOpen ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-            onClick={() => setIsNavOpen(!isNavOpen)}
+            onClick={() => {
+              setIsNavOpen(!isNavOpen);
+              setIsSearchOpen(false);
+              setIsSettingsOpen(false);
+            }}
             title="Toggle Explorer"
           >
             <Code size={20} />
@@ -78,51 +90,81 @@ const Workspace = () => {
             <MessageCircle size={20} />
           </button>
           <button
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            className={`p-2 rounded-lg transition-all ${isSearchOpen ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            onClick={() => {
+              setIsSearchOpen(!isSearchOpen);
+              setIsNavOpen(false);
+              setIsSettingsOpen(false);
+            }}
             title="Search"
           >
             <Search size={20} />
           </button>
           <button
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            className={`p-2 rounded-lg transition-all ${isSettingsOpen ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            onClick={() => {
+              setIsSettingsOpen(!isSettingsOpen);
+              setIsNavOpen(false);
+              setIsSearchOpen(false);
+            }}
             title="Settings"
           >
             <Settings size={20} />
           </button>
         </nav>
 
-        {/* File Explorer Panel */}
+        {/* File Explorer/Search/Settings Panel */}
         <div
-          className={`transition-all duration-300 bg-gray-900 border-r border-gray-800 ${
-            isNavOpen ? "w-[250px]" : "w-0"
+          className={`transition-all duration-300 bg-gray-900 border-r border-gray-800 ${(
+            isNavOpen || isSearchOpen || isSettingsOpen) ? "w-[250px]" : "w-0"
           } overflow-hidden`}
         >
           {isNavOpen && (
-            <div className="flex flex-col h-full">
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-white">File Explorer</h2>
-                  <div className="flex gap-2">
-                    <button className="p-1.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 rounded-lg transition-all">
-                      <PlusCircle size={16} className="text-white" />
-                    </button>
-                    <button className="p-1.5 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 rounded-lg transition-all">
-                      <Folder size={16} className="text-white" />
-                    </button>
-                  </div>
+            <NavPanel workspaceId={workspaceId} openFile={setSelectedFile} />
+          )}
+          {isSearchOpen && (
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Search Files</h3>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search files..."
+                  className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              </div>
+            </div>
+          )}
+          {isSettingsOpen && (
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Workspace Settings</h3>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-300">Theme</label>
+                  <select className="bg-gray-800 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                  </select>
                 </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search files..."
-                    className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    <Search className="w-4 h-4" />
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-300">Font Size</label>
+                  <select className="bg-gray-800 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="12">12px</option>
+                    <option value="14">14px</option>
+                    <option value="16">16px</option>
+                    <option value="18">18px</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-300">Auto Save</span>
+                  <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                    <input type="checkbox" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" />
+                    <label className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                   </div>
                 </div>
               </div>
-              <NavPanel workspaceId={workspaceId} openFile={setSelectedFile} />
             </div>
           )}
         </div>
