@@ -10,22 +10,19 @@ const features = [
     id: 'tab',
     title: 'Tab, tab, tab',
     description: 'Xen.ai lets you breeze through changes by predicting your next edit.',
-    imageUrl: '/tab-autocomplete.svg',
-    isGif: true,
+    videoUrl: 'https://assets.basehub.com/191e7e6d/ad4eb38cfa78d745acec4f5faf8d73c1/current-best-for-one-mp4.mp4',
   },
   {
     id: 'codebase',
     title: 'Knows your codebase',
     description: 'Get answers from your codebase or refer to files or docs. Use the models code in one click.',
-    imageUrl: '/globe.svg',
-    isGif: false,
+    videoUrl: 'https://assets.basehub.com/191e7e6d/2c99e8a087f981290dc74d2b621a7192/current-best-for-two-mp4.mp4',
   },
   {
     id: 'natural-language',
     title: 'Edit in natural language',
     description: 'Xen.ai lets you write code using instructions. Update entire classes or functions with a simple prompt.',
-    imageUrl: '/file.svg',
-    isGif: false,
+    videoUrl: 'https://assets.basehub.com/191e7e6d/8ea9258a063943d01c1454f028b5294b/website-three-mp4.mp4',
   },
 ];
 
@@ -87,13 +84,13 @@ export default function FeaturesSection() {
                   
                   {/* Editor content */}
                   <div className="bg-zinc-950 w-full aspect-video relative">
-                    <Image
-                      src={feature.imageUrl}
-                      alt={feature.title}
-                      width={600}
-                      height={400}
-                      className={`w-full h-auto ${feature.isGif ? 'object-contain' : 'object-cover'}`}
-                      unoptimized={feature.isGif}
+                    <video
+                      src={feature.videoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 </div>

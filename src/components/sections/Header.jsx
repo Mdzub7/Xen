@@ -16,39 +16,32 @@ export default function Header() {
           <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">XenAI</span>
         </Link>
         
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden md:flex items-center space-x-8 ml-16">
           <Link href="/" className={`text-sm ${pathname === '/' ? 'text-white' : 'text-white/70 hover:text-white'} transition-colors`}>
             Home
           </Link>
           <Link href="/dashboard" className={`text-sm ${pathname === '/dashboard' ? 'text-white' : 'text-white/70 hover:text-white'} transition-colors`}>
             Dashboard
           </Link>
-          <Link href="/workspace" className={`text-sm ${pathname.startsWith('/workspace') ? 'text-white' : 'text-white/70 hover:text-white'} transition-colors`}>
-            Workspace
+          <Link href="/pricing" className={`text-sm ${pathname === '/pricing' ? 'text-white' : 'text-white/70 hover:text-white'} transition-colors`}>
+            Pricing
+          </Link>
+          <Link href="/features" className={`text-sm ${pathname === '/features' ? 'text-white' : 'text-white/70 hover:text-white'} transition-colors`}>
+            Features
           </Link>
         </nav>
         
         <div className="flex items-center space-x-4">
-          {user ? (
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="border-white/20 hover:bg-white/10">
-                Dashboard
-              </Button>
-            </Link>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="outline" size="sm" className="border-white/20 hover:bg-white/10">
-                  Login
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="sm">
-                  Sign Up
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link href="/dashboard">
+            <Button size="sm" variant="outline" className="bg-zinc-800/50 hover:bg-zinc-700/50 text-white border-zinc-700">
+              Dashboard
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+              Login
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
