@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname(); // ✅ Get current path
+  const pathname = usePathname(); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
         setUser(user);
 
         // ✅ Redirect to dashboard only when user is on login, register, or home
-        if (pathname === "/login" || pathname === "/" || pathname === "/register") {
+        if (pathname === "/login" || pathname === "/register") {
           router.push("/dashboard");
         }
       } else {
@@ -30,11 +30,11 @@ export function AuthProvider({ children }) {
           router.push("/login");
         }
       }
-      setLoading(false); // ✅ Ensure loading turns to false
+      setLoading(false); 
     });
 
     return () => unsubscribe();
-  }, [pathname, router]); // ✅ Ensure pathname updates trigger re-runs
+  }, [pathname, router]); 
 
   if (loading) return <div>Loading...</div>;
 

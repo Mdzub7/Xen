@@ -20,6 +20,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { ClipboardDocumentIcon, CheckIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { MessageSquarePlus, Send, Sparkles, Trash, Trash2, X, XCircle } from "lucide-react";
+import { fetchFileContents } from "../helpers/getDocuments";
 
 function Chatroom({ workspaceId, setIsChatOpen }) {
   const [messages, setMessages] = useState([]);
@@ -91,19 +92,39 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     let aiPrompt = null;
     let userMessage = newMessage;
 
+    // New command to fetch file contents
+    const fileMatch = newMessage.match(/@file\s+(\S+)/);
+    let fileName = null;
+    if (fileMatch) {
+      fileName = fileMatch[1].trim();
+    }
+
     console.log(aiMatch);
     if (aiMatch) {
       aiPrompt = aiMatch[1].trim();
     }
 
     try {
-      if (userMessage) {
+      if (userMessage && !fileName) {
         await addDoc(messagesRef, {
           text: userMessage,
           createdAt: serverTimestamp(),
           imageUrl,
           userId,
           name,
+          workspaceId,
+        });
+      }
+
+      if (fileName) {
+        // Fetch file contents from Firebase
+        const fileContents = await fetchFileContents(fileName);
+        await addDoc(messagesRef, {
+          text: `📄 File Contents: ${fileContents}`,
+          createdAt: serverTimestamp(),
+          imageUrl: "/file-icon.png",
+          userId: "FILE_BOT",
+          name: "FileBot",
           workspaceId,
         });
       }
@@ -219,7 +240,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
             isAI ? "bg-green-900/20 border ring-1 ring-green-400" :
             isCurrentUser ? "bg-purple-600/60" : "bg-blue-600/60 "
           }`}>
-            {isAI && <span className="text-blue-400 mr-2">⚡</span>}
+            {isAI && <span className="text-blue-400 mr-2"></span>}
             
             {parseMessage(msg.text).map((part, index) => {
               if (part.type === 'text') {
