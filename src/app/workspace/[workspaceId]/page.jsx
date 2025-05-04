@@ -113,7 +113,7 @@ const Workspace = () => {
                         </div>
                     </div>
 
-                    <Editor file={selectedFile} language={currentLanguage} />
+                    <Editor file={selectedFile} />
                 </main>
             </div>
 

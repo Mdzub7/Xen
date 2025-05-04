@@ -54,7 +54,7 @@ export default function CodeEditor({ file }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("javascript");
   const [isEditorReady, setIsEditorReady] = useState(false);
-  
+
   // Refs
   const monaco = useMonaco();
   const timeoutRef = useRef(null);
@@ -62,7 +62,7 @@ export default function CodeEditor({ file }) {
   const settingsRef = useRef(null);
   const isSavingRef = useRef(false);
   const unsubscribeRef = useRef(null);
-  
+
   // When the component unmounts, unsubscribe from Firestore
   useEffect(() => {
     return () => {
@@ -71,7 +71,7 @@ export default function CodeEditor({ file }) {
       }
     };
   }, []);
-  
+
   // When the file changes, update the language and load content
   useEffect(() => {
     if (!file?.name) {
@@ -79,13 +79,13 @@ export default function CodeEditor({ file }) {
       setCurrentCode("// Select a file to start coding...");
       return;
     }
-    
+
     // Unsubscribe from previous file listener if any
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-    
+
     // Detect language from file extension
     const parts = file.name.split(".");
     if (parts.length > 1) {
@@ -95,16 +95,16 @@ export default function CodeEditor({ file }) {
     } else {
       setCodeLanguage("text");
     }
-    
+
     // Load file content
     loadFileContent();
-    
+
   }, [file?.id]); // Only re-run when file ID changes
-  
+
   // Load file content from either cache or Firestore
   const loadFileContent = useCallback(async () => {
     if (!file?.id || !file?.workspaceId) return;
-    
+
     try {
       // Check if we have this file in cache first
       if (FILE_CACHE[file.id]) {
@@ -113,18 +113,18 @@ export default function CodeEditor({ file }) {
         // Show loading state or placeholder while fetching
         setCurrentCode("// Loading file content...");
       }
-      
+
       // Setup the file path
       const filePath = `workspaces/${file.workspaceId}/files`;
       const fileRef = doc(db, filePath, file.id);
-      
+
       // Get the current document
       const fileSnap = await getDoc(fileRef);
-      
+
       // Check if file exists and has content
       if (fileSnap.exists()) {
         const fileData = fileSnap.data();
-        
+
         // If file has content, use it
         if (fileData && fileData.content !== undefined) {
           setCurrentCode(fileData.content);
@@ -134,7 +134,7 @@ export default function CodeEditor({ file }) {
           const boilerplate = BOILERPLATES[codeLanguage] || `// No boilerplate available for ${codeLanguage}`;
           setCurrentCode(boilerplate);
           FILE_CACHE[file.id] = boilerplate;
-          
+
           // Save the boilerplate
           await updateDoc(fileRef, {
             content: boilerplate,
@@ -146,7 +146,7 @@ export default function CodeEditor({ file }) {
         const boilerplate = BOILERPLATES[codeLanguage] || `// No boilerplate available for ${codeLanguage}`;
         setCurrentCode(boilerplate);
         FILE_CACHE[file.id] = boilerplate;
-        
+
         // Create the file with boilerplate
         await setDoc(fileRef, {
           content: boilerplate,
@@ -156,28 +156,28 @@ export default function CodeEditor({ file }) {
           workspaceId: file.workspaceId
         });
       }
-      
+
       // Set up realtime listener for this file
       setupFileListener();
-      
+
     } catch (error) {
       console.error("Error loading file content:", error);
       setCurrentCode("// Error loading file content. Please try again.");
     }
   }, [file, codeLanguage]);
-  
+
   // Setup Firestore listener for realtime updates
   const setupFileListener = useCallback(() => {
     if (!file?.id || !file?.workspaceId) return;
-    
+
     const filePath = `workspaces/${file.workspaceId}/files`;
     const fileRef = doc(db, filePath, file.id);
-    
+
     // Unsubscribe from any existing listener
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
-    
+
     // Create new listener
     unsubscribeRef.current = onSnapshot(fileRef, (docSnap) => {
       if (docSnap.exists() && !isSavingRef.current) {
@@ -193,45 +193,45 @@ export default function CodeEditor({ file }) {
       }
     });
   }, [file, currentCode]);
-  
+
   // Handle editor changes with debounce
   const handleEditorChange = useCallback((value) => {
     // Update local state immediately
     setCurrentCode(value);
-    
+
     // Update the cache
     if (file?.id) {
       FILE_CACHE[file.id] = value;
     }
-    
+
     // Debounce saving to Firestore
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       saveToFirestore(value);
     }, 500);
   }, [file]);
-  
+
   // Save content to Firestore
   const saveToFirestore = useCallback(async (content) => {
     if (!file?.id || !file?.workspaceId || !isEditorReady) return;
-    
+
     try {
       isSavingRef.current = true;
-      
+
       const filePath = `workspaces/${file.workspaceId}/files`;
       const fileRef = doc(db, filePath, file.id);
-      
+
       await updateDoc(fileRef, {
         content,
         lastModified: new Date().toISOString()
       });
-      
+
       // Ensure the cache is updated
       FILE_CACHE[file.id] = content;
-      
+
       // Reset saving flag after a delay
       setTimeout(() => {
         isSavingRef.current = false;
@@ -241,31 +241,31 @@ export default function CodeEditor({ file }) {
       isSavingRef.current = false;
     }
   }, [file, isEditorReady]);
-  
+
   // Editor mount handler
   const onMount = useCallback((editor) => {
     editorRef.current = editor;
     setIsEditorReady(true);
     editor.focus();
   }, []);
-  
+
   // Generate documentation
   const generateDocs = async () => {
     if (!isEditorReady) return;
-    
+
     setIsLoading(true);
     try {
       const res = await axios.post("/api/generate-documentation", {
         code: currentCode,
         language: codeLanguage
       });
-      
+
       const documentation = res.data.documentation;
       const newCode = `${currentCode}\n\n${documentation}`;
-      
+
       setCurrentCode(newCode);
       FILE_CACHE[file.id] = newCode;
-      
+
       // Save to Firestore
       saveToFirestore(newCode);
     } catch (error) {
@@ -274,23 +274,23 @@ export default function CodeEditor({ file }) {
       setIsLoading(false);
     }
   };
-  
+
   // Fix syntax errors
   const fixSyntaxErrors = async () => {
     if (!isEditorReady) return;
-    
+
     setIsFixing(true);
     try {
       const res = await axios.post("/api/get-errors", {
         code: currentCode,
         codeLanguage
       });
-      
+
       if (res.data.fixedCode) {
         const fixedCode = res.data.fixedCode;
         setCurrentCode(fixedCode);
         FILE_CACHE[file.id] = fixedCode;
-        
+
         // Save to Firestore
         saveToFirestore(fixedCode);
       }
@@ -300,14 +300,14 @@ export default function CodeEditor({ file }) {
       setIsFixing(false);
     }
   };
-  
+
   // Toggle expanded mode
   const toggleExpand = useCallback(() => {
     setIsExpanded(prev => !prev);
     // Reflow the editor layout after state update
     setTimeout(() => editorRef.current?.layout(), 100);
   }, []);
-  
+
   // Close settings panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -315,18 +315,18 @@ export default function CodeEditor({ file }) {
         setShowSettings(false);
       }
     };
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
+
   // Available themes
   const themes = [
     { name: "Dark", value: "vs-dark" },
     { name: "Light", value: "light" },
     { name: "High Contrast", value: "hc-black" },
   ];
-  
+
   return (
     <div className={`bg-gray-900 m-2 h-[94%] rounded-xl p-3 ${isExpanded ? "fixed inset-0 z-50 m-0" : "relative"}`}>
       <Box className="relative h-full">
@@ -357,23 +357,31 @@ export default function CodeEditor({ file }) {
                   disabled={isFixing}
                   className="flex items-center justify-center p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors"
                 >
-                  <Wrench size={18} />
+                  {isFixing ? (
+                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                  ) : (
+                    <Wrench size={18} />
+                  )}
                 </button>
                 <button
                   onClick={generateDocs}
                   disabled={isLoading}
                   className="flex items-center justify-center p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors"
                 >
-                  <Sparkles size={18} />
+                  {isLoading ?(
+                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                  ):(
+                    <Sparkles size={18} />
+                    )}
                 </button>
               </div>
             </div>
-            
+
             {/* Settings Panel */}
             {showSettings && (
-              <div 
+              <div
                 ref={settingsRef}
-                className="absolute top-16 right-4 bg-gray-800 p-4 rounded-md shadow-xl border border-gray-700 z-10"
+                className="absolute top-16 right-10 bg-gray-800 p-4 rounded-md shadow-xl border border-gray-700 z-10"
               >
                 <h3 className="text-gray-300 mb-2">Settings</h3>
                 <div className="flex flex-col gap-2">
@@ -384,11 +392,10 @@ export default function CodeEditor({ file }) {
                         <button
                           key={theme.value}
                           onClick={() => setSelectedTheme(theme.value)}
-                          className={`px-2 py-1 rounded-md text-xs ${
-                            selectedTheme === theme.value
+                          className={`px-2 py-1 rounded-md text-xs ${selectedTheme === theme.value
                               ? "bg-blue-600 text-white"
                               : "bg-gray-700 text-gray-300"
-                          }`}
+                            }`}
                         >
                           {theme.name}
                         </button>
@@ -416,7 +423,7 @@ export default function CodeEditor({ file }) {
                 </div>
               </div>
             )}
-            
+
             <Editor
               height={isExpanded ? "calc(100vh - 100px)" : "92%"}
               theme={selectedTheme}
