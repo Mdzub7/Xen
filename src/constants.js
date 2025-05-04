@@ -1,12 +1,12 @@
-export const LANGUAGE_VERSIONS = {
-    javascript: "18.15.0",
-    typescript: "5.0.3",
-    python: "3.10.0",
-    java: "15.0.2",
-    csharp: "6.12.0",
-    php: "8.2.3",
-    cpp: "10.2.0",
-}
+// constants.js
+export const LANGUAGE_IDS = {
+    python: 71,
+    javascript: 63,
+    cpp: 54,
+    c: 50,
+    java: 62,
+  };
+  
 
 export const BOILERPLATES = {
     'javascript': "// JavaScript code snippet\nconsole.log('Hello, world!');",

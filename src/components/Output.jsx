@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { executeCode } from "../api";
+import { LANGUAGE_IDS } from "../constants";
 
 const Output = ({ editorRef, language }) => {
   const [output, setOutput] = useState(null);
@@ -11,14 +12,16 @@ const Output = ({ editorRef, language }) => {
     const sourceCode = editorRef.current.getValue();
     if (!sourceCode) return;
     setIsLoading(true);
+
     try {
-      const { run: result } = await executeCode(language, sourceCode);
-      setOutput(result.output.split("\n"));
-      result.stderr ? setIsError(true) : setIsError(false);
+      const result = await executeCode(LANGUAGE_IDS[language], sourceCode);
+      const out = result.stdout || result.stderr || "No output";
+      setOutput(out.split("\n"));
+      setIsError(!!result.stderr);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setIsError(true);
-      setOutput(['Error while running the code']);
+      setOutput(["Error while running the code"]);
     } finally {
       setIsLoading(false);
     }
@@ -33,9 +36,9 @@ const Output = ({ editorRef, language }) => {
       >
         {isLoading ? 'Compiling...' : 'Run Code'}
       </button>
-      
+
       <div
-        className={` p-4 rounded-md overflow-auto h-[90%] ${isError ? 'border-red-500 text-red-500' : ' text-white'} `}
+        className={`p-4 rounded-md overflow-auto h-[90%] ${isError ? 'border-red-500 text-red-500' : 'text-white'}`}
       >
         {isLoading ? (
           <div className="flex justify-center items-center h-full">

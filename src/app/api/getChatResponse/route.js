@@ -24,19 +24,15 @@ export async function POST(request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Step 1: Retrieve relevant documents based on the user query
     const relevantDocs = await getRelevantDocuments(message);
     
-    // Step 2: Combine retrieved documents into a prompt
     let retrievalContent = relevantDocs.map(doc => doc.content).join("\n");
     const prompt = `Here are some documents that might help answer your question:\n\n${retrievalContent}\n\nAnswer the following question based on the above information:\n${message}`;
 
-    // Step 3: Generate response using LangChain model
     const chatHistory = [new HumanMessage(message)];
     const result = await model.invoke(chatHistory);
     const aiResponse = result.content.trim();
 
-    // Step 4: Return generated response
     return NextResponse.json({ aiResponse }, { status: 200 });
 
   } catch (error) {

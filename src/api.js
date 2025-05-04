@@ -1,19 +1,15 @@
+// api.js
 import axios from "axios";
-import { LANGUAGE_VERSIONS } from "./constants";
 
 const API = axios.create({
-  baseURL: "https://emkc.org/api/v2/piston",
+  baseURL: "http://localhost:2358", // or your VPS IP/domain
 });
 
-export const executeCode = async (language, sourceCode) => {
-  const response = await API.post("/execute", {
-    language: language,
-    version: LANGUAGE_VERSIONS[language],
-    files: [
-      {
-        content: sourceCode,
-      },  
-    ],
+export const executeCode = async (languageId, sourceCode, stdin = "") => {
+  const response = await API.post("/submissions?base64_encoded=false&wait=true", {
+    source_code: sourceCode,
+    language_id: languageId,
+    stdin,
   });
   return response.data;
 };

@@ -3,10 +3,9 @@ import { Moon, Sun, Sparkles, Wrench, File, Expand, Shrink, Settings } from "luc
 import { useState, useEffect, useRef, useCallback } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import axios from "axios";
-import LanguageDisplay from "./LanguageSelector";
 import { Box } from "@chakra-ui/react";
 import Output from "./Output";
-import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/config/firebase";
 
 // Keep boilerplates in a separate file to improve code organization
@@ -41,202 +40,259 @@ const EXTENSION_TO_LANGUAGE = {
   md: 'markdown',
 };
 
+// Object to store cached file contents
+const FILE_CACHE = {};
+
 export default function CodeEditor({ file }) {
   // State management
   const [selectedTheme, setSelectedTheme] = useState("vs-dark");
   const [fontSize, setFontSize] = useState(14);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [updatedCode, setUpdatedCode] = useState("");
+  const [currentCode, setCurrentCode] = useState("");
   const [isFixing, setIsFixing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("javascript");
+  const [isEditorReady, setIsEditorReady] = useState(false);
   
   // Refs
   const monaco = useMonaco();
   const timeoutRef = useRef(null);
   const editorRef = useRef();
   const settingsRef = useRef(null);
-  const isInitialMount = useRef(true);
-  const hasAppliedBoilerplate = useRef(false);
-
-  // Detect language based on file extension
+  const isSavingRef = useRef(false);
+  const unsubscribeRef = useRef(null);
+  
+  // When the component unmounts, unsubscribe from Firestore
   useEffect(() => {
-    // Reset boilerplate flag when file changes
-    hasAppliedBoilerplate.current = false;
-    
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
+  
+  // When the file changes, update the language and load content
+  useEffect(() => {
     if (!file?.name) {
       setCodeLanguage("javascript");
-      setUpdatedCode("// Select a file to start coding...");
+      setCurrentCode("// Select a file to start coding...");
       return;
     }
     
+    // Unsubscribe from previous file listener if any
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    
+    // Detect language from file extension
     const parts = file.name.split(".");
     if (parts.length > 1) {
       const extension = parts.pop().toLowerCase();
       const detectedLanguage = EXTENSION_TO_LANGUAGE[extension] || extension;
       setCodeLanguage(detectedLanguage);
-      
-      // Fetch file content (boilerplate logic is inside fetchFileContent)
-      fetchFileContent(detectedLanguage);
     } else {
       setCodeLanguage("text");
-      setUpdatedCode("");
     }
+    
+    // Load file content
+    loadFileContent();
+    
   }, [file?.id]); // Only re-run when file ID changes
-
-  // Apply boilerplate only if the file is empty and it's the first load
-  const applyBoilerplate = useCallback((language, existingContent) => {
-    if (!existingContent || existingContent.trim() === "") {
-      return BOILERPLATES[language] || `// No boilerplate available for ${language}`;
-    }
-    return existingContent;
-  }, []);
-
-  // Fetch file content from Firestore
-  const fetchFileContent = useCallback(async (detectedLanguage) => {
+  
+  // Load file content from either cache or Firestore
+  const loadFileContent = useCallback(async () => {
     if (!file?.id || !file?.workspaceId) return;
     
     try {
+      // Check if we have this file in cache first
+      if (FILE_CACHE[file.id]) {
+        setCurrentCode(FILE_CACHE[file.id]);
+      } else {
+        // Show loading state or placeholder while fetching
+        setCurrentCode("// Loading file content...");
+      }
+      
+      // Setup the file path
       const filePath = `workspaces/${file.workspaceId}/files`;
       const fileRef = doc(db, filePath, file.id);
+      
+      // Get the current document
       const fileSnap = await getDoc(fileRef);
-
+      
+      // Check if file exists and has content
       if (fileSnap.exists()) {
         const fileData = fileSnap.data();
-        // Use whatever content is in Firestore, even if it's an empty string
-        const fileContent = fileData.content;
         
-        // Check if this is a brand new file that has never had content
-        if (fileContent === undefined) {
-          // Only apply boilerplate if content is undefined (never set before)
-          const boilerplate = BOILERPLATES[detectedLanguage] || `// No boilerplate available for ${detectedLanguage}`;
-          setUpdatedCode(boilerplate);
-          // Save the boilerplate to Firestore immediately
-          await updateDoc(fileRef, { content: boilerplate });
+        // If file has content, use it
+        if (fileData && fileData.content !== undefined) {
+          setCurrentCode(fileData.content);
+          FILE_CACHE[file.id] = fileData.content;
         } else {
-          // Use existing content (even if it's empty)
-          setUpdatedCode(fileContent || "");
+          // If file exists but has no content, apply boilerplate
+          const boilerplate = BOILERPLATES[codeLanguage] || `// No boilerplate available for ${codeLanguage}`;
+          setCurrentCode(boilerplate);
+          FILE_CACHE[file.id] = boilerplate;
+          
+          // Save the boilerplate
+          await updateDoc(fileRef, {
+            content: boilerplate,
+            lastModified: new Date().toISOString()
+          });
         }
       } else {
-        // File document doesn't exist yet, this is a brand new file
-        const boilerplate = BOILERPLATES[detectedLanguage] || `// No boilerplate available for ${detectedLanguage}`;
-        setUpdatedCode(boilerplate);
+        // If file doesn't exist yet, create it with boilerplate
+        const boilerplate = BOILERPLATES[codeLanguage] || `// No boilerplate available for ${codeLanguage}`;
+        setCurrentCode(boilerplate);
+        FILE_CACHE[file.id] = boilerplate;
+        
+        // Create the file with boilerplate
+        await setDoc(fileRef, {
+          content: boilerplate,
+          name: file.name,
+          lastModified: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          workspaceId: file.workspaceId
+        });
       }
+      
+      // Set up realtime listener for this file
+      setupFileListener();
+      
     } catch (error) {
-      console.error("Error fetching file content:", error);
-      // Only set default content as fallback if there's an error
-      setUpdatedCode("// Error loading file content");
+      console.error("Error loading file content:", error);
+      setCurrentCode("// Error loading file content. Please try again.");
     }
-  }, [file]);
-
-  // Listen for changes to the file content in Firestore
-  useEffect(() => {
+  }, [file, codeLanguage]);
+  
+  // Setup Firestore listener for realtime updates
+  const setupFileListener = useCallback(() => {
     if (!file?.id || !file?.workspaceId) return;
-
+    
     const filePath = `workspaces/${file.workspaceId}/files`;
     const fileRef = doc(db, filePath, file.id);
-
-    // Track if we're currently updating from local changes
-    // This prevents applying remote changes while we're still typing
-    let isLocalUpdate = false;
-
-    const unsubscribe = onSnapshot(fileRef, (snapshot) => {
-      if (snapshot.exists() && !isLocalUpdate) {
-        const data = snapshot.data();
-        // Only update if the content is different and we're not the source of the change
-        if (data.content !== updatedCode) {
-          setUpdatedCode(data.content || "");
+    
+    // Unsubscribe from any existing listener
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+    
+    // Create new listener
+    unsubscribeRef.current = onSnapshot(fileRef, (docSnap) => {
+      if (docSnap.exists() && !isSavingRef.current) {
+        const data = docSnap.data();
+        if (data && data.content !== undefined) {
+          // Only update if the content changed and we're not the source of the change
+          // This prevents overwriting user's unsaved changes
+          if (data.content !== currentCode) {
+            FILE_CACHE[file.id] = data.content;
+            setCurrentCode(data.content);
+          }
         }
       }
     });
-
-    return () => unsubscribe();
-  }, [file]);
-
-  // Auto-save with debounce
+  }, [file, currentCode]);
+  
+  // Handle editor changes with debounce
   const handleEditorChange = useCallback((value) => {
-    // Always update the local state immediately with whatever the user types
-    setUpdatedCode(value);
+    // Update local state immediately
+    setCurrentCode(value);
     
+    // Update the cache
+    if (file?.id) {
+      FILE_CACHE[file.id] = value;
+    }
+    
+    // Debounce saving to Firestore
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     
-    // Debounce auto-save to reduce Firestore writes
     timeoutRef.current = setTimeout(() => {
       saveToFirestore(value);
-    }, 500); // 500ms debounce
-  }, []);
-
+    }, 500);
+  }, [file]);
+  
   // Save content to Firestore
   const saveToFirestore = useCallback(async (content) => {
-    if (!file?.id || !file?.workspaceId) return;
+    if (!file?.id || !file?.workspaceId || !isEditorReady) return;
     
     try {
-      // Flag to indicate we're making a local update
-      window.isLocalUpdate = true;
+      isSavingRef.current = true;
       
       const filePath = `workspaces/${file.workspaceId}/files`;
       const fileRef = doc(db, filePath, file.id);
       
-      // Use setDoc with merge option to handle both new and existing files
-      // This prevents errors if the document doesn't exist yet
-      await updateDoc(fileRef, { 
+      await updateDoc(fileRef, {
         content,
-        lastModified: new Date().toISOString() 
+        lastModified: new Date().toISOString()
       });
       
-      // Reset the flag after a short delay
+      // Ensure the cache is updated
+      FILE_CACHE[file.id] = content;
+      
+      // Reset saving flag after a delay
       setTimeout(() => {
-        window.isLocalUpdate = false;
-      }, 100);
+        isSavingRef.current = false;
+      }, 200);
     } catch (error) {
       console.error("Error saving file:", error);
-      window.isLocalUpdate = false;
+      isSavingRef.current = false;
     }
-  }, [file]);
-
+  }, [file, isEditorReady]);
+  
   // Editor mount handler
   const onMount = useCallback((editor) => {
     editorRef.current = editor;
+    setIsEditorReady(true);
     editor.focus();
   }, []);
-
+  
   // Generate documentation
   const generateDocs = async () => {
+    if (!isEditorReady) return;
+    
     setIsLoading(true);
     try {
-      const res = await axios.post("/api/generate-documentation", { 
-        code: updatedCode, 
-        language: codeLanguage 
+      const res = await axios.post("/api/generate-documentation", {
+        code: currentCode,
+        language: codeLanguage
       });
       
       const documentation = res.data.documentation;
-      setUpdatedCode((prevCode) => `${prevCode}\n\n${documentation}`);
+      const newCode = `${currentCode}\n\n${documentation}`;
       
-      // Save updated code with documentation
-      saveToFirestore(`${updatedCode}\n\n${documentation}`);
+      setCurrentCode(newCode);
+      FILE_CACHE[file.id] = newCode;
+      
+      // Save to Firestore
+      saveToFirestore(newCode);
     } catch (error) {
       console.error("Failed to generate documentation:", error);
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   // Fix syntax errors
   const fixSyntaxErrors = async () => {
+    if (!isEditorReady) return;
+    
     setIsFixing(true);
     try {
-      const res = await axios.post("/api/get-errors", { 
-        code: updatedCode, 
-        codeLanguage 
+      const res = await axios.post("/api/get-errors", {
+        code: currentCode,
+        codeLanguage
       });
       
       if (res.data.fixedCode) {
-        setUpdatedCode(res.data.fixedCode);
-        // Save fixed code
-        saveToFirestore(res.data.fixedCode);
+        const fixedCode = res.data.fixedCode;
+        setCurrentCode(fixedCode);
+        FILE_CACHE[file.id] = fixedCode;
+        
+        // Save to Firestore
+        saveToFirestore(fixedCode);
       }
     } catch (error) {
       console.error("Failed to fix syntax:", error);
@@ -244,14 +300,14 @@ export default function CodeEditor({ file }) {
       setIsFixing(false);
     }
   };
-
+  
   // Toggle expanded mode
   const toggleExpand = useCallback(() => {
     setIsExpanded(prev => !prev);
     // Reflow the editor layout after state update
     setTimeout(() => editorRef.current?.layout(), 100);
   }, []);
-
+  
   // Close settings panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -263,14 +319,14 @@ export default function CodeEditor({ file }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
+  
   // Available themes
   const themes = [
     { name: "Dark", value: "vs-dark" },
     { name: "Light", value: "light" },
     { name: "High Contrast", value: "hc-black" },
   ];
-
+  
   return (
     <div className={`bg-gray-900 m-2 h-[94%] rounded-xl p-3 ${isExpanded ? "fixed inset-0 z-50 m-0" : "relative"}`}>
       <Box className="relative h-full">
@@ -311,7 +367,6 @@ export default function CodeEditor({ file }) {
                   <Sparkles size={18} />
                 </button>
               </div>
-              <LanguageDisplay fileType={codeLanguage} />
             </div>
             
             {/* Settings Panel */}
@@ -366,7 +421,7 @@ export default function CodeEditor({ file }) {
               height={isExpanded ? "calc(100vh - 100px)" : "92%"}
               theme={selectedTheme}
               language={codeLanguage}
-              value={updatedCode}
+              value={currentCode}
               onMount={onMount}
               onChange={handleEditorChange}
               options={{

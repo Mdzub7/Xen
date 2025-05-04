@@ -10,8 +10,7 @@ import { MessageCircle, Menu, PanelLeftOpen } from "lucide-react";
 import Header from "@/components/Header";
 import ShowMembers from "@/components/Members";
 import LiveCursor from "@/components/LiveCursor";
-import NavPanel from "@/components/Navpanel";
-import LanguageSelector from "@/components/LanguageSelector"; // Import the updated LanguageSelector
+import NavPanel from "@/components/Navpanel"; // Import the updated LanguageSelector
 import { LANGUAGE_VERSIONS } from "@/constants";
 const Workspace = () => {
     const { workspaceId } = useParams();
@@ -111,10 +110,6 @@ const Workspace = () => {
                             <span className="text-lg text-gray-200 bg-slate-800 px-4 py-2   rounded-full flex items-center justify-center gap-3">
                                 <ShowMembers workspaceId={workspaceId} />
                             </span>
-                            <LanguageSelector
-                                fileType={currentLanguage}
-                                onSelect={handleLanguageSelect}
-                            />
                         </div>
                     </div>
 

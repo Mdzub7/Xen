@@ -20,7 +20,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { ClipboardDocumentIcon, CheckIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { MessageSquarePlus, Send, Sparkles, Trash, Trash2, X, XCircle } from "lucide-react";
-import { fetchFileContents } from "../helpers/getDocuments";
 
 function Chatroom({ workspaceId, setIsChatOpen }) {
   const [messages, setMessages] = useState([]);
@@ -116,18 +115,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
         });
       }
 
-      if (fileName) {
-        // Fetch file contents from Firebase
-        const fileContents = await fetchFileContents(fileName);
-        await addDoc(messagesRef, {
-          text: `📄 File Contents: ${fileContents}`,
-          createdAt: serverTimestamp(),
-          imageUrl: "/file-icon.png",
-          userId: "FILE_BOT",
-          name: "FileBot",
-          workspaceId,
-        });
-      }
+
 
       if (aiPrompt) {
         const aiResponse = await generateAIResponse(aiPrompt);
