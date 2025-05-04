@@ -11,14 +11,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname(); // ✅ Get current path
+  const pathname = usePathname(); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUser(user);
 
-        // Only redirect from login and register pages, not from homepage
         if (pathname === "/login" || pathname === "/register") {
           router.push("/dashboard");
         }
@@ -30,11 +29,11 @@ export function AuthProvider({ children }) {
           router.push("/login");
         }
       }
-      setLoading(false); // ✅ Ensure loading turns to false
+      setLoading(false); 
     });
 
     return () => unsubscribe();
-  }, [pathname, router]); // ✅ Ensure pathname updates trigger re-runs
+  }, [pathname, router]); 
 
   if (loading) return <div>Loading...</div>;
 

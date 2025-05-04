@@ -140,13 +140,20 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
     let aiPrompt = null;
     let userMessage = newMessage;
 
+    // New command to fetch file contents
+    const fileMatch = newMessage.match(/@file\s+(\S+)/);
+    let fileName = null;
+    if (fileMatch) {
+      fileName = fileMatch[1].trim();
+    }
+
     console.log(aiMatch);
     if (aiMatch) {
       aiPrompt = aiMatch[1].trim();
     }
 
     try {
-      if (userMessage) {
+      if (userMessage && !fileName) {
         await addDoc(messagesRef, {
           text: userMessage,
           createdAt: serverTimestamp(),
@@ -156,6 +163,8 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
           workspaceId,
         });
       }
+
+
 
       if (aiPrompt) {
         const aiResponse = await generateAIResponse(aiPrompt);
@@ -270,7 +279,7 @@ function Chatroom({ workspaceId, setIsChatOpen }) {
             isAI ? "bg-green-900/20 border ring-1 ring-green-400" :
             isCurrentUser ? "bg-purple-600/60" : "bg-blue-600/60 "
           }`}>
-            {isAI && <span className="text-blue-400 mr-2">⚡</span>}
+            {isAI && <span className="text-blue-400 mr-2"></span>}
             
             {parseMessage(msg.text).map((part, index) => {
               if (part.type === 'text') {
