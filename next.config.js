@@ -4,7 +4,20 @@ const nextConfig = {
     instrumentationHook: false
   },
   reactStrictMode: true,
-  swcMinify: true
+  swcMinify: true,
+  output: 'standalone',
+  images: {
+    unoptimized: true
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        fs: false,
+        path: false
+      }
+    }
+    return config
+  }
 }
 
 module.exports = nextConfig
